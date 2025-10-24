@@ -148,10 +148,13 @@ public class main1 {
             switch (choice) {
                 case 1:
                     viewProducts();
+                    break;
                 case 2:
                     makeOrder();
+                    break;
                 case 3:
                     viewOrderHistory();
+                    break;
                 case 4:
                     System.out.println("Logging out...");
                 default:
@@ -355,13 +358,13 @@ public class main1 {
         }
 
         String insertOrder = "INSERT INTO tbl_orders (u_id, o_date, o_status) VALUES (?, DATETIME('now'), ?)";
-        conf.addRecord(insertOrder, loggedInUserId, "Pending");
+        long orderId = conf.addRecord(insertOrder, loggedInUserId, "Pending");
 
-        String getOrderId = "SELECT last_insert_rowid() AS order_id";
-        List<Map<String, Object>> orderRes = conf.fetchRecords(getOrderId);
-        int orderId = Integer.parseInt(orderRes.get(0).get("order_id").toString());
+        // String getOrderId = "SELECT last_insert_rowid() AS order_id FROM tbl_orders;";
+        // List<Map<String, Object>> orderRes = conf.fetchRecords(getOrderId);
+        // int orderId = Integer.parseInt(orderRes.get(0).get("order_id").toString());
 
-        String insertDetail = "INSERT INTO tbl_order_detail (order_id, product_id, ord_quantity) VALUES (?, ?, ?)";
+        String insertDetail = "INSERT INTO tbl_order_detail (o_id, p_id, ord_quantity) VALUES (?, ?, ?)";
         conf.addRecord(insertDetail, orderId, productId, qty);
 
         String updateStock = "UPDATE tbl_products SET p_stock = p_stock - ? WHERE p_id = ?";
@@ -375,8 +378,8 @@ public class main1 {
         System.out.println("\n--- MY ORDER HISTORY ---");
         String qry ="SELECT o.o_id, o.o_date, o.o_status, p.p_name, p.p_price, d.ord_quantity\n" +
             "FROM tbl_orders o\n" +"JOIN tbl_order_detail d ON o.o_id = d.o_id\n" +
-            "JOIN tbl_products p ON d.product_id = p.p_id\n" +
-            "WHERE o.u_id = ?\n" +"ORDER BY o.order_date DESC";
+            "JOIN tbl_products p ON d.p_id = p.p_id\n" +
+            "WHERE o.u_id = ?\n" +"ORDER BY o.o_date DESC";
             
         List<Map<String, Object>> orders = conf.fetchRecords(qry, loggedInUserId);
 
@@ -392,9 +395,9 @@ public class main1 {
             double subtotal = price * qty;
             total += subtotal;
 
-            System.out.println("\nOrder ID: " + order.get("order_id"));
-            System.out.println("Date: " + order.get("order_date"));
-            System.out.println("Status: " + order.get("order_status"));
+            System.out.println("\nOrder ID: " + order.get("o_id"));
+            System.out.println("Date: " + order.get("o_date"));
+            System.out.println("Status: " + order.get("o_status"));
             System.out.println("Product: " + order.get("p_name"));
             System.out.println("Quantity: " + qty);
             System.out.println("Price: ₱" + price);
