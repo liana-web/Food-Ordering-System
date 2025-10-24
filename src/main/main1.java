@@ -22,8 +22,10 @@ public class main1 {
             switch (choice) {
                 case 1:
                     registerUser();
+                    break;
                 case 2:
                     loginUser();
+                    break;
                 case 3:
                 {
                     System.out.println("Thank you! Exiting system...");
@@ -31,6 +33,7 @@ public class main1 {
                 }
                 default:
                     System.out.println("Invalid Option!");
+                    break;
             }
 
             System.out.print("Do you want to continue? (y/n): ");
@@ -123,12 +126,16 @@ public class main1 {
             switch (action) {
                 case 1:
                     manageUsers();
+                    break;
                 case 2:
                     manageProducts();
+                    break;
                 case 3:
                     System.out.println("Logging out...");
+                    break;
                 default:
                     System.out.println("Invalid option.");
+                    break;
             }
         } while (action != 3);
     }
@@ -157,8 +164,10 @@ public class main1 {
                     break;
                 case 4:
                     System.out.println("Logging out...");
+                    break;
                 default:
                     System.out.println("Invalid choice.");
+                    break;
             }
         } while (choice != 4);
     }
@@ -179,16 +188,22 @@ public class main1 {
             switch (choice) {
                 case 1:
                     viewUsers();
+                    break;
                 case 2:
                     approveUser();
+                    break;
                 case 3:
                     updateUser();
+                    break;
                 case 4 :
                     deleteUser();
+                    break;
                 case 5:
                     System.out.println("Returning...");
+                    break;
                 default:
                     System.out.println("Invalid option.");
+                    break;
             }
         } while (choice != 5);
     }
@@ -258,16 +273,22 @@ public class main1 {
             switch (choice) {
                 case 1:
                     addProduct();
+                    break;
                 case 2:
                     viewProducts();
+                    break;
                 case 3:
                     updateProduct();
+                    break;
                 case 4:
                     deleteProduct();
+                    break;
                 case 5:
                     System.out.println("Returning...");
+                    break;
                 default:
                     System.out.println("Invalid option.");
+                    break;
             }
         } while (choice != 5);
     }
