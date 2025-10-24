@@ -1,32 +1,34 @@
 package main;
+
 import config.config;
 import java.util.*;
 
 public class main1 {
     static Scanner sc = new Scanner(System.in);
     static config conf = new config();
+    static int loggedInUserId = -1;
 
     public static void main(String[] args) {
         String reps;
         do {
-            System.out.println("\n-----FOOD ORDERING SYSTEM-----");
+            System.out.println("\n===== FOOD ORDERING SYSTEM =====");
             System.out.println("1. Register");
             System.out.println("2. Login");
             System.out.println("3. Exit");
             System.out.print("Enter Choice: ");
-            int mainChoice = sc.nextInt();
+            int choice = sc.nextInt();
             sc.nextLine();
 
-            switch (mainChoice) {
+            switch (choice) {
                 case 1:
                     registerUser();
-                    break;
                 case 2:
                     loginUser();
-                    break;
                 case 3:
-                    System.out.println("Thank you!");
+                {
+                    System.out.println("Thank you! Exiting system...");
                     return;
+                }
                 default:
                     System.out.println("Invalid Option!");
             }
@@ -37,22 +39,24 @@ public class main1 {
     }
 
     public static void registerUser() {
+        System.out.println("\n--- USER REGISTRATION ---");
         System.out.print("Enter Name: ");
         String name = sc.nextLine();
-        System.out.print("Enter Email: ");
-        String email = sc.nextLine();
 
+        String email;
         while (true) {
+            System.out.print("Enter Email: ");
+            email = sc.nextLine();
             String check = "SELECT * FROM tbl_users WHERE u_email = ?";
             List<Map<String, Object>> res = conf.fetchRecords(check, email);
             if (res.isEmpty()) break;
-
-            System.out.print("Email already exists. Enter another: ");
-            email = sc.nextLine();
+            System.out.println("Email already exists. Try another.");
         }
 
         System.out.print("Enter Password: ");
-        String pass = sc.nextLine();
+        String pass = conf.hashPassword(sc.nextLine());
+        
+
         System.out.print("Enter Role (1 - Admin, 2 - Customer): ");
         int roleNum = sc.nextInt();
         sc.nextLine();
@@ -64,18 +68,19 @@ public class main1 {
         }
 
         String role = roleNum == 1 ? "Admin" : "Customer";
-        String role_status = roleNum == 1 ? "Approved" : "Pending";
+        String status = roleNum == 1 ? "Approved" : "Pending";
 
         String sql = "INSERT INTO tbl_users (u_name, u_email, u_password, u_role, u_status) VALUES (?, ?, ?, ?, ?)";
-        conf.addRecord(sql, name, email, pass, role, role_status);
-        System.out.println("Registered successfully. Waiting for approval.");
+        conf.addRecord(sql, name, email, pass, role, status);
+        System.out.println("Registration successful. " + (status.equals("Pending") ? "Please wait for admin approval." : "You can now log in."));
     }
 
     public static void loginUser() {
+        System.out.println("\n--- USER LOGIN ---");
         System.out.print("Enter Email: ");
         String email = sc.nextLine();
         System.out.print("Enter Password: ");
-        String pass = sc.nextLine();
+        String pass = conf.hashPassword(sc.nextLine());
 
         String qry = "SELECT * FROM tbl_users WHERE u_email = ? AND u_password = ?";
         List<Map<String, Object>> res = conf.fetchRecords(qry, email, pass);
@@ -94,83 +99,117 @@ public class main1 {
             return;
         }
 
-        System.out.println("Login successful!");
+        loggedInUserId = Integer.parseInt(user.get("u_id").toString());
+        System.out.println("Login successful! Welcome " + user.get("u_name"));
 
         if (role.equalsIgnoreCase("Admin")) {
             adminDashboard();
-        } else if (role.equalsIgnoreCase("Customer")) {
+        } else {
             customerDashboard();
         }
     }
 
     public static void adminDashboard() {
-    int action;
-    do {
-        System.out.println("\n--- ADMIN DASHBOARD ---");
-        System.out.println("1. View Users");
-        System.out.println("2. Approve User");
-        System.out.println("3. Update User");
-        System.out.println("4. Delete User");
-        System.out.println("5. Manage Products");
-        System.out.println("6. Logout");
-        System.out.print("Enter Action: ");
-        action = sc.nextInt();
-        sc.nextLine();
+        int action;
+        do {
+            System.out.println("\n===== ADMIN DASHBOARD =====");
+            System.out.println("1. Manage Users");
+            System.out.println("2. Manage Products");
+            System.out.println("3. Logout");
+            System.out.print("Enter Choice: ");
+            action = sc.nextInt();
+            sc.nextLine();
 
-        switch (action) {
-            case 1:
-                viewUser();
-                break;
-            case 2:
-                viewUser();
-                System.out.print("Enter User ID to Approve: ");
-                int id = sc.nextInt();
-                sc.nextLine();
-                String sql = "UPDATE tbl_users SET u_status = ? WHERE u_id = ?";
-                conf.updateRecord(sql, "Approved", id);
-                break;
-            case 3:
-                viewUser();
-                updateUser();
-                break;
-            case 4:
-                viewUser();
-                deleteUser();
-                break;
-            case 5:
-                manageProducts(); // 👈 Call your new method here
-                break;
-            case 6:
-                System.out.println("Logging out...");
-                break;
-            default:
-                System.out.println("Invalid option.");
-        }
-    } while (action != 6);
-}
-
-    public static void customerDashboard() {
-        System.out.println("\n--- CUSTOMER DASHBOARD ---");
-        System.out.println("Welcome! More customer features coming soon.");
-        
-        viewProducts();
-        System.out.println("Enter Id to select products: ");
-        int id  = sc.nextInt();
-        sc.nextLine();
-        
-        String qry = "SELECT * FROM tbl_products WHERE p_id = ?";
-        conf.addRecord(qry, id);
+            switch (action) {
+                case 1:
+                    manageUsers();
+                case 2:
+                    manageProducts();
+                case 3:
+                    System.out.println("Logging out...");
+                default:
+                    System.out.println("Invalid option.");
+            }
+        } while (action != 3);
     }
 
-    public static void viewUser() {
-        String qry = "SELECT * FROM tbl_users";
-        String[] hdrs = {"ID", "Name", "Email", "Password", "Role", "Status"};
-        String[] clms = {"u_id", "u_name", "u_email", "u_password", "u_role", "u_status"};
+    public static void customerDashboard() {
+        int choice;
+        do {
+            System.out.println("\n===== CUSTOMER DASHBOARD =====");
+            System.out.println("1. View Products");
+            System.out.println("2. Make an Order");
+            System.out.println("3. View My Orders");
+            System.out.println("4. Logout");
+            System.out.print("Enter choice: ");
+            choice = sc.nextInt();
+            sc.nextLine();
 
-        conf.viewRecords(qry, hdrs, clms);
+            switch (choice) {
+                case 1:
+                    viewProducts();
+                case 2:
+                    makeOrder();
+                case 3:
+                    viewOrderHistory();
+                case 4:
+                    System.out.println("Logging out...");
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        } while (choice != 4);
+    }
+
+    public static void manageUsers() {
+        int choice;
+        do {
+            System.out.println("\n--- USER MANAGEMENT ---");
+            System.out.println("1. View Users");
+            System.out.println("2. Approve User");
+            System.out.println("3. Update User");
+            System.out.println("4. Delete User");
+            System.out.println("5. Back");
+            System.out.print("Enter choice: ");
+            choice = sc.nextInt();
+            sc.nextLine();
+
+            switch (choice) {
+                case 1:
+                    viewUsers();
+                case 2:
+                    approveUser();
+                case 3:
+                    updateUser();
+                case 4 :
+                    deleteUser();
+                case 5:
+                    System.out.println("Returning...");
+                default:
+                    System.out.println("Invalid option.");
+            }
+        } while (choice != 5);
+    }
+
+    public static void viewUsers() {
+        String qry = "SELECT * FROM tbl_users";
+        String[] headers = {"ID", "Name", "Email", "Role", "Status"};
+        String[] fields = {"u_id", "u_name", "u_email", "u_role", "u_status"};
+        conf.viewRecords(qry, headers, fields);
+    }
+
+    public static void approveUser() {
+        viewUsers();
+        System.out.print("Enter User ID to Approve: ");
+        int id = sc.nextInt();
+        sc.nextLine();
+
+        String sql = "UPDATE tbl_users SET u_status = ? WHERE u_id = ?";
+        conf.updateRecord(sql, "Approved", id);
+        System.out.println("User approved successfully.");
     }
 
     public static void updateUser() {
+        viewUsers();
         System.out.print("Enter User ID to Update: ");
         int id = sc.nextInt();
         sc.nextLine();
@@ -184,93 +223,184 @@ public class main1 {
         System.out.print("New Role: ");
         String role = sc.nextLine();
 
-        String qry = "UPDATE tbl_users SET u_name=?, u_email=?, u_password=?, u_role=? WHERE u_id=?";
-        conf.updateRecord(qry, name, email, pass, role, id);
+        String sql = "UPDATE tbl_users SET u_name=?, u_email=?, u_password=?, u_role=? WHERE u_id=?";
+        conf.updateRecord(sql, name, email, pass, role, id);
+        System.out.println("User updated successfully.");
     }
 
     public static void deleteUser() {
+        viewUsers();
         System.out.print("Enter User ID to Delete: ");
         int id = sc.nextInt();
         sc.nextLine();
 
-        String qry = "DELETE FROM tbl_users WHERE u_id=? VALUES (?)";
-        conf.deleteRecord(qry, id);
+        String sql = "DELETE FROM tbl_users WHERE u_id=?";
+        conf.deleteRecord(sql, id);
+        System.out.println("User deleted successfully.");
     }
+
     public static void manageProducts() {
-    int choice;
-    do {
-        System.out.println("\n--- PRODUCT MANAGEMENT ---");
-        System.out.println("1. Add Product");
-        System.out.println("2. View Products");
-        System.out.println("3. Update Product");
-        System.out.println("4. Delete Product");
-        System.out.println("5. Back");
-        System.out.print("Enter choice: ");
-        choice = sc.nextInt();
+        int choice;
+        do {
+            System.out.println("\n--- PRODUCT MANAGEMENT ---");
+            System.out.println("1. Add Product");
+            System.out.println("2. View Products");
+            System.out.println("3. Update Product");
+            System.out.println("4. Delete Product");
+            System.out.println("5. Back");
+            System.out.print("Enter choice: ");
+            choice = sc.nextInt();
+            sc.nextLine();
+
+            switch (choice) {
+                case 1:
+                    addProduct();
+                case 2:
+                    viewProducts();
+                case 3:
+                    updateProduct();
+                case 4:
+                    deleteProduct();
+                case 5:
+                    System.out.println("Returning...");
+                default:
+                    System.out.println("Invalid option.");
+            }
+        } while (choice != 5);
+    }
+
+    public static void addProduct() {
+        System.out.print("Product Name: ");
+        String name = sc.nextLine();
+        System.out.print("Price: ");
+        double price = sc.nextDouble();
+        System.out.print("Stock: ");
+        int stock = sc.nextInt();
         sc.nextLine();
 
-        switch (choice) {
-            case 1:
-                addProduct();
-                break;
-            case 2:
-                viewProducts();
-                break;
-            case 3:
-                updateProduct();
-                break;
-            case 4:
-                deleteProduct();
-                break;
+        String sql = "INSERT INTO tbl_products (p_name, p_price, p_stock) VALUES (?, ?, ?)";
+        conf.addRecord(sql, name, price, stock);
+        System.out.println("Product added successfully.");
+    }
+
+    public static void viewProducts() {
+        String qry = "SELECT * FROM tbl_products";
+        String[] headers = {"ID", "Name", "Price", "Stock"};
+        String[] fields = {"p_id", "p_name", "p_price", "p_stock"};
+        conf.viewRecords(qry, headers, fields);
+    }
+
+    public static void updateProduct() {
+        viewProducts();
+        System.out.print("Enter Product ID to Update: ");
+        int id = sc.nextInt();
+        sc.nextLine();
+
+        System.out.print("New Name: ");
+        String name = sc.nextLine();
+        System.out.print("New Price: ");
+        double price = sc.nextDouble();
+        System.out.print("New Stock: ");
+        int stock = sc.nextInt();
+        sc.nextLine();
+
+        String sql = "UPDATE tbl_products SET p_name=?, p_price=?, p_stock=? WHERE p_id=?";
+        conf.updateRecord(sql, name, price, stock, id);
+        System.out.println("Product updated successfully.");
+    }
+
+    public static void deleteProduct() {
+        viewProducts();
+        System.out.print("Enter Product ID to Delete: ");
+        int id = sc.nextInt();
+        sc.nextLine();
+
+        String sql = "DELETE FROM tbl_products WHERE p_id=?";
+        conf.deleteRecord(sql, id);
+        System.out.println("Product deleted successfully.");
+    }
+
+    public static void makeOrder() {
+        viewProducts();
+
+        System.out.print("\nEnter Product ID to Order: ");
+        int productId = sc.nextInt();
+        sc.nextLine();
+
+        String productQry = "SELECT * FROM tbl_products WHERE p_id = ?";
+        List<Map<String, Object>> productRes = conf.fetchRecords(productQry, productId);
+
+        if (productRes.isEmpty()) {
+            System.out.println("No product found with ID: " + productId);
+            return;
         }
-    } while (choice != 5);
-}
 
-public static void addProduct() {
-    System.out.print("Product Name: ");
-    String name = sc.nextLine();
-    System.out.print("Price: ");
-    double price = sc.nextDouble();
-    System.out.print("Stock: ");
-    int stock = sc.nextInt();
-    sc.nextLine();
+        Map<String, Object> product = productRes.get(0);
+        String productName = product.get("p_name").toString();
+        double price = Double.parseDouble(product.get("p_price").toString());
+        int stock = Integer.parseInt(product.get("p_stock").toString());
 
-    String sql = "INSERT INTO tbl_products (p_name, p_price, p_stock) VALUES (?, ?, ?)";
-    conf.addRecord(sql, name, price, stock);
-}
+        System.out.println("\n--- PRODUCT DETAILS ---");
+        System.out.println("Name: " + productName);
+        System.out.println("Price: ₱" + price);
+        System.out.println("Available Stock: " + stock);
 
-public static void viewProducts() {
-    String qry = "SELECT * FROM tbl_products";
-    String[] hdrs = {"ID", "Name", "Price", "Stock"};
-    String[] clms = {"p_id", "p_name", "p_price", "p_stock"};
-    conf.viewRecords(qry, hdrs, clms);
-}
+        System.out.print("\nEnter Quantity: ");
+        int qty = sc.nextInt();
+        sc.nextLine();
 
-public static void updateProduct() {
-    viewProducts();
-    System.out.print("Enter Product ID to Update: ");
-    int id = sc.nextInt();
-    sc.nextLine();
-    System.out.print("New Name: ");
-    String name = sc.nextLine();
-    System.out.print("New Price: ");
-    double price = sc.nextDouble();
-    System.out.print("New Stock: ");
-    int stock = sc.nextInt();
-    sc.nextLine();
+        if (qty > stock) {
+            System.out.println("❌ Not enough stock available!");
+            return;
+        }
 
-    String sql = "UPDATE tbl_products SET p_name=?, p_price=?, p_stock=? WHERE p_id=?";
-    conf.updateRecord(sql, name, price, stock, id);
-}
+        String insertOrder = "INSERT INTO tbl_orders (u_id, o_date, o_status) VALUES (?, DATETIME('now'), ?)";
+        conf.addRecord(insertOrder, loggedInUserId, "Pending");
 
-public static void deleteProduct() {
-    viewProducts();
-    System.out.print("Enter Product ID to Delete: ");
-    int id = sc.nextInt();
-    sc.nextLine();
+        String getOrderId = "SELECT last_insert_rowid() AS order_id";
+        List<Map<String, Object>> orderRes = conf.fetchRecords(getOrderId);
+        int orderId = Integer.parseInt(orderRes.get(0).get("order_id").toString());
 
-    String sql = "DELETE FROM tbl_products WHERE p_id=?";
-    conf.deleteRecord(sql, id);
-}
+        String insertDetail = "INSERT INTO tbl_order_detail (order_id, product_id, ord_quantity) VALUES (?, ?, ?)";
+        conf.addRecord(insertDetail, orderId, productId, qty);
 
+        String updateStock = "UPDATE tbl_products SET p_stock = p_stock - ? WHERE p_id = ?";
+        conf.updateRecord(updateStock, qty, productId);
+
+        System.out.println("✅ Order placed successfully!");
+        System.out.println("🧾 You ordered " + qty + "x " + productName + " (₱" + (price * qty) + ")");
+    }
+
+    public static void viewOrderHistory() {
+        System.out.println("\n--- MY ORDER HISTORY ---");
+        String qry ="SELECT o.o_id, o.o_date, o.o_status, p.p_name, p.p_price, d.ord_quantity\n" +
+            "FROM tbl_orders o\n" +"JOIN tbl_order_detail d ON o.o_id = d.o_id\n" +
+            "JOIN tbl_products p ON d.product_id = p.p_id\n" +
+            "WHERE o.u_id = ?\n" +"ORDER BY o.order_date DESC";
+            
+        List<Map<String, Object>> orders = conf.fetchRecords(qry, loggedInUserId);
+
+        if (orders.isEmpty()) {
+            System.out.println("You have no past orders.");
+            return;
+        }
+
+        double total = 0;
+        for (Map<String, Object> order : orders) {
+            double price = Double.parseDouble(order.get("p_price").toString());
+            int qty = Integer.parseInt(order.get("ord_quantity").toString());
+            double subtotal = price * qty;
+            total += subtotal;
+
+            System.out.println("\nOrder ID: " + order.get("order_id"));
+            System.out.println("Date: " + order.get("order_date"));
+            System.out.println("Status: " + order.get("order_status"));
+            System.out.println("Product: " + order.get("p_name"));
+            System.out.println("Quantity: " + qty);
+            System.out.println("Price: ₱" + price);
+            System.out.println("Subtotal: ₱" + subtotal);
+        }
+
+        System.out.println("\nTOTAL SPENT: ₱" + total);
+    }
 }
